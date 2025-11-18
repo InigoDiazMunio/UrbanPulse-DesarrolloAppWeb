@@ -1,0 +1,27 @@
+{
+  "name": "urbanpulse-gateway",
+  "version": "1.0.0",
+  "description": "API Gateway for UrbanPulse (Node.js + Express)",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "lint": "echo \"no lint configured\""
+  },
+  "keywords": ["gateway","urbanpulse","express","proxy"],
+  "author": "TuNombre",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "jsonwebtoken": "^9.0.0",
+    "morgan": "^1.10.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^4.6.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

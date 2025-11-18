@@ -1,0 +1,93 @@
+services:
+  gateway:
+    build: ./src/gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./src/gateway/.env.example
+    depends_on:
+      - microservice-node
+      - microservice-python
+    networks:
+      - urban-net
+
+  microservice-node:
+    build: ./src/microservice-node
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./src/microservice-node/.env.example
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/urbanpulse
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - urban-net
+
+  microservice-python:
+    build: ./src/microservice-python
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./src/microservice-python/.env.example
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - urban-net
+
+  frontend:
+    build: ./src/frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE=http://gateway:8080/api
+    depends_on:
+      - gateway
+    networks:
+      - urban-net
+
+  mongo:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./src/database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - urban-net
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: urbanpulse
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: urbanpulse_db  # ✅ IMPORTANTE
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/database/postgres-init.sql:/docker-entrypoint-initdb.d/postgres-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urbanpulse -d urbanpulse_db"]  # ✅ AÑADIR "-d urbanpulse_db"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - urban-net
+
+volumes:
+  mongo-data:
+  postgres-data:
+
+networks:
+  urban-net:
+    driver: bridge
