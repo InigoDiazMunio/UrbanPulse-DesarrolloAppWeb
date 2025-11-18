@@ -28,7 +28,7 @@ services:
   microservice-python:
     build: ./src/microservice-python
     ports:
-      - "8001:8001"
+      - "8001:8000"
     env_file:
       - ./src/microservice-python/.env.example
     depends_on:

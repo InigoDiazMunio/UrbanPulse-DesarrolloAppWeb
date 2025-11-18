@@ -7,6 +7,9 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const jwtMiddleware = require('./middleware/auth');
 
+// ✅ IMPORTAR RUTAS DE AUTH
+const authRoutes = require('./routes/auth');
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -24,6 +27,16 @@ const swaggerDefinition = {
   servers: [
     { url: `http://localhost:${PORT}`, description: 'Local server' }
   ],
+  // ✅ AÑADIR SEGURIDAD
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT'
+      }
+    }
+  }
 };
 
 const options = {
@@ -33,6 +46,9 @@ const options = {
 
 const swaggerSpec = swaggerJsdoc(options);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// ✅ USAR RUTAS DE AUTH (SIN PROTECCIÓN)
+app.use('/auth', authRoutes);
 
 // --- Health
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'gateway' }));
@@ -46,23 +62,21 @@ app.get('/api/admin/health', jwtMiddleware, (req, res) => {
 const TRAFFIC_SERVICE_URL = process.env.TRAFFIC_SERVICE_URL || 'http://localhost:8002';
 const WEATHER_SERVICE_URL = process.env.WEATHER_SERVICE_URL || 'http://localhost:8001';
 
-// Proxy /api/movilidad -> traffic service
+// ✅ QUITAR jwtMiddleware TEMPORALMENTE PARA DESARROLLO
+// (o déjalo si quieres forzar login)
 app.use(
   '/api/movilidad',
-  jwtMiddleware, 
+  // jwtMiddleware,  // ← Comentar esta línea para desarrollo sin login
   createProxyMiddleware({
     target: TRAFFIC_SERVICE_URL,
     changeOrigin: true,
-    pathRewrite: { '^/api/movilidad': '/' }, // mapea /api/movilidad/* -> /* en el microservicio
-    onProxyReq: (proxyReq, req, res) => {
-      
-    }
+    pathRewrite: { '^/api/movilidad': '/' },
   })
 );
 
-// Proxy /api/meteorologia -> weather service
 app.use(
   '/api/meteorologia',
+  // jwtMiddleware,  // ← Comentar también si quieres
   createProxyMiddleware({
     target: WEATHER_SERVICE_URL,
     changeOrigin: true,
@@ -70,7 +84,6 @@ app.use(
   })
 );
 
-// Passthrough para endpoints directos del gateway
 app.get('/api/info', (req, res) => {
   res.json({
     app: 'UrbanPulse API Gateway',
@@ -79,7 +92,6 @@ app.get('/api/info', (req, res) => {
   });
 });
 
-// Catch-all
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found in gateway' });
 });
