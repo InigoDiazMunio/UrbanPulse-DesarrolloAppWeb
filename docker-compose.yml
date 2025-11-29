@@ -1,24 +1,52 @@
+version: '3.8'
+
 services:
-  gateway:
-    build: ./src/gateway
+  mongo:
+    image: mongo:6.0
+    container_name: urbanpulse-mongo
     ports:
-      - "8080:8080"
-    env_file:
-      - ./src/gateway/.env.example
-    depends_on:
-      - microservice-node
-      - microservice-python
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - urban-net
+
+  postgres:
+    image: postgres:15
+    container_name: urbanpulse-postgres
+    environment:
+      POSTGRES_USER: urbanpulse
+      POSTGRES_PASSWORD: urbanpulse
+      POSTGRES_DB: urbanpulse_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/database/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urbanpulse -d urbanpulse_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - urban-net
 
   microservice-node:
     build: ./src/microservice-node
+    container_name: urbanpulse-microservice-node
     ports:
       - "8002:8002"
-    env_file:
-      - ./src/microservice-node/.env.example
     environment:
       - MONGO_URI=mongodb://mongo:27017/urbanpulse
+      - PORT=8002
+      - POLL_INTERVAL_SECONDS=600
     depends_on:
       mongo:
         condition: service_healthy
@@ -27,60 +55,48 @@ services:
 
   microservice-python:
     build: ./src/microservice-python
+    container_name: urbanpulse-microservice-python
     ports:
       - "8001:8000"
-    env_file:
-      - ./src/microservice-python/.env.example
+    environment:
+      - DATABASE_URL=postgresql://urbanpulse:urbanpulse@postgres:5432/urbanpulse_db
+      - POLL_INTERVAL_SECONDS=600
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - urban-net
+    restart: on-failure
+
+  gateway:
+    build: ./src/gateway
+    container_name: urbanpulse-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - MONGO_URI=mongodb://mongo:27017/urbanpulse
+      - JWT_SECRET=urbanpulse_secret_key_2024
+      - TRAFFIC_SERVICE_URL=http://microservice-node:8002
+      - WEATHER_SERVICE_URL=http://microservice-python:8000
+    depends_on:
+      mongo:
+        condition: service_healthy
+      microservice-node:
+        condition: service_started
+      microservice-python:
+        condition: service_started
+    networks:
+      - urban-net
+    restart: on-failure
 
   frontend:
     build: ./src/frontend
+    container_name: urbanpulse-frontend
     ports:
       - "3000:80"
-    environment:
-      - VITE_API_BASE=http://gateway:8080/api
     depends_on:
       - gateway
-    networks:
-      - urban-net
-
-  mongo:
-    image: mongo:6.0
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-      - ./src/database/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
-    networks:
-      - urban-net
-
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: urbanpulse
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: urbanpulse_db  # ✅ IMPORTANTE
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./src/database/postgres-init.sql:/docker-entrypoint-initdb.d/postgres-init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U urbanpulse -d urbanpulse_db"]  # ✅ AÑADIR "-d urbanpulse_db"
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
     networks:
       - urban-net
 
