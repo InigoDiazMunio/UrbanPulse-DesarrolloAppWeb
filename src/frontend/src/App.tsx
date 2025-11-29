@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import History from './pages/History';
-import ApiDocs from './pages/ApiDocs';
+import API from './pages/API';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 
@@ -138,7 +138,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/history" element={<History />} />
-                <Route path="/api" element={<ApiDocs />} />
+                <Route path="/api" element={<API />} />
                 <Route path="/admin" element={<Admin />} />
               </Routes>
             </main>
