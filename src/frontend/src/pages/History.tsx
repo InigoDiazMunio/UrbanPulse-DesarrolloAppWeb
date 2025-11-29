@@ -228,7 +228,7 @@ export default function History() {
             lineHeight: '1.6',
             margin: 0
           }}>
-            La vista de Histórico permite analizar la evolución del tráfico 
+            Esta pagina de Histórico permite  analizar la evolución del tráfico 
             y la contaminación a lo largo del tiempo.
           </p>
         </div>
@@ -366,7 +366,7 @@ export default function History() {
             color: '#202124', 
             marginBottom: '8px' 
           }}>
-            Evolución Temporal - Últimos 30 Días.
+            Evolución Temporal - Últimos 30 Días
           </h2>
           <p style={{ 
             fontSize: '13px', 
