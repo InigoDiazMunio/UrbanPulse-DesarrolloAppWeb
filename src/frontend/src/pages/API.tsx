@@ -23,7 +23,7 @@ export default function API() {
           </h1>
           <p style={{ 
             fontSize: '16px', 
-            color: '#5f6368', 
+            color: '#202124', 
             lineHeight: '1.6',
             margin: 0
           }}>
@@ -84,7 +84,7 @@ export default function API() {
             <div style={{ padding: '16px 20px' }}>
               <p style={{ 
                 fontSize: '14px', 
-                color: '#5f6368', 
+                color: '#202124', 
                 margin: '0 0 12px 0' 
               }}>
                 Recupera datos de tráfico y movilidad en tiempo real de todas las estaciones de Euskadi.
@@ -94,7 +94,8 @@ export default function API() {
                 padding: '12px', 
                 borderRadius: '6px',
                 fontSize: '13px',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                color: '#202124'
               }}>
                 <strong>Respuesta:</strong> Array de objetos con zone, vehicle_count, incident_count, timestamp, etc.
               </div>
@@ -136,7 +137,7 @@ export default function API() {
             <div style={{ padding: '16px 20px' }}>
               <p style={{ 
                 fontSize: '14px', 
-                color: '#5f6368', 
+                color: '#202124', 
                 margin: '0 0 12px 0' 
               }}>
                 Devuelve niveles de contaminación atmosférica (PM10, PM2.5, NO2, O3, SO2, CO) de todas las estaciones.
@@ -146,14 +147,79 @@ export default function API() {
                 padding: '12px', 
                 borderRadius: '6px',
                 fontSize: '13px',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                color: '#202124'
               }}>
                 <strong>Respuesta:</strong> Array de mediciones con city, zone, pollutant, value, unit, timestamp.
               </div>
             </div>
           </div>
 
-          {/* Endpoint 3 - Registro */}
+          {/* Endpoint 3 - Login */}
+          <div style={{ 
+            border: '1px solid #e0e0e0', 
+            borderRadius: '8px',
+            marginBottom: '16px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              background: '#f8f9fa', 
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <span style={{ 
+                background: '#ea4335', 
+                color: 'white', 
+                padding: '4px 12px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                POST
+              </span>
+              <code style={{ 
+                fontSize: '14px', 
+                fontWeight: '500',
+                color: '#202124'
+              }}>
+                /api/login
+              </code>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#202124', 
+                margin: '0 0 12px 0' 
+              }}>
+                Permite autenticar usuarios y obtener un token JWT para acceder a los endpoints protegidos.
+              </p>
+              <div style={{ 
+                background: '#f8f9fa', 
+                padding: '12px', 
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                marginBottom: '8px',
+                color: '#202124'
+              }}>
+                <strong>Body:</strong> {`{ "username": "usuario", "password": "contraseña" }`}
+              </div>
+              <div style={{ 
+                background: '#f8f9fa', 
+                padding: '12px', 
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                color: '#202124'
+              }}>
+                <strong>Respuesta:</strong> {`{ "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }`}
+              </div>
+            </div>
+          </div>
+
+          {/* Endpoint 4 - Registro */}
           <div style={{ 
             border: '1px solid #e0e0e0', 
             borderRadius: '8px',
@@ -187,19 +253,31 @@ export default function API() {
             <div style={{ padding: '16px 20px' }}>
               <p style={{ 
                 fontSize: '14px', 
-                color: '#5f6368', 
+                color: '#202124', 
                 margin: '0 0 12px 0' 
               }}>
-                Permite gestionar autenticaciones y usuarios del sistema.
+                Permite registrar nuevos usuarios en el sistema.
               </p>
               <div style={{ 
                 background: '#f8f9fa', 
                 padding: '12px', 
                 borderRadius: '6px',
                 fontSize: '13px',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                marginBottom: '8px',
+                color: '#202124'
               }}>
-                <strong>Body:</strong> {`{ "username": "user", "password": "pass" }`}
+                <strong>Body:</strong> {`{ "username": "nuevo_usuario", "password": "contraseña_segura" }`}
+              </div>
+              <div style={{ 
+                background: '#f8f9fa', 
+                padding: '12px', 
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                color: '#202124'
+              }}>
+                <strong>Respuesta:</strong> {`{ "message": "Usuario registrado con éxito" }`}
               </div>
             </div>
           </div>
@@ -232,7 +310,7 @@ export default function API() {
           </p>
           <p style={{ 
             fontSize: '14px', 
-            color: '#5f6368', 
+            color: '#202124', 
             lineHeight: '1.6',
             margin: 0
           }}>
@@ -266,7 +344,7 @@ export default function API() {
           </h2>
           <p style={{ 
             fontSize: '14px', 
-            color: '#5f6368', 
+            color: '#202124', 
             lineHeight: '1.6',
             margin: '0 0 16px 0'
           }}>
@@ -278,12 +356,13 @@ export default function API() {
             borderRadius: '8px',
             fontSize: '13px',
             fontFamily: 'monospace',
-            border: '1px solid #e0e0e0'
+            border: '1px solid #e0e0e0',
+            color: '#202124'
           }}>
             <div style={{ marginBottom: '8px' }}>
               <strong>Authorization:</strong> Bearer &lt;token&gt;
             </div>
-            <div style={{ color: '#5f6368', fontSize: '12px' }}>
+            <div style={{ fontSize: '12px' }}>
               Obtén tu token mediante POST /api/login con tus credenciales
             </div>
           </div>
@@ -306,7 +385,7 @@ export default function API() {
           </h2>
           <ul style={{ 
             fontSize: '14px', 
-            color: '#5f6368', 
+            color: '#202124', 
             lineHeight: '1.8',
             paddingLeft: '20px'
           }}>
