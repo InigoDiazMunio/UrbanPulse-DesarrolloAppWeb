@@ -6,27 +6,45 @@ import API from './pages/API';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) {
   const token = localStorage.getItem('token');
-  return token ? <>{children}</> : <Navigate to="/login" />;
+  const userRole = localStorage.getItem('role');
+  
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Si requiere admin y el usuario no es admin, redirigir al dashboard
+  if (requireAdmin && userRole !== 'admin') {
+    return <Navigate to="/" />;
+  }
+  
+  return <>{children}</>;
 }
 
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string>('');
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
+    const storedRole = localStorage.getItem('role');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    }
+    if (storedRole) {
+      setRole(storedRole);
     }
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('role');
     setUser(null);
+    setRole('');
     navigate('/login');
   };
 
@@ -55,7 +73,7 @@ export default function App() {
                   alignItems: 'center',
                   gap: '8px'
                 }}>
-                   UrbanPulse
+                  UrbanPulse
                 </h1>
                 <nav style={{ display: 'flex', gap: '24px' }}>
                   <Link 
@@ -80,7 +98,7 @@ export default function App() {
                       transition: 'color 0.3s'
                     }}
                   >
-                    Historico
+                    Histórico
                   </Link>
                   <Link 
                     to="/api" 
@@ -94,24 +112,29 @@ export default function App() {
                   >
                     API
                   </Link>
-                  <Link 
-                    to="/admin" 
-                    style={{ 
-                      color: location.pathname === '/admin' ? '#fff' : '#b0b8c1',
-                      textDecoration: 'none', 
-                      fontWeight: '500',
-                      fontSize: '14px',
-                      transition: 'color 0.3s'
-                    }}
-                  >
-                    Login
-                  </Link>
+                  
+                  {/* Mostrar Admin SOLO si el rol es 'admin' */}
+                  {role === 'admin' && (
+                    <Link 
+                      to="/admin" 
+                      style={{ 
+                        color: location.pathname === '/admin' ? '#fff' : '#b0b8c1',
+                        textDecoration: 'none', 
+                        fontWeight: '500',
+                        fontSize: '14px',
+                        transition: 'color 0.3s'
+                      }}
+                    >
+                      Admin
+                    </Link>
+                  )}
                 </nav>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                 {user && (
                   <span style={{ color: '#b0b8c1', fontSize: '14px' }}>
                     👤 {user.username}
+                    {role === 'admin' && <span style={{ marginLeft: '8px', color: '#fbbf24' }}>👑</span>}
                   </span>
                 )}
                 <button
@@ -139,7 +162,16 @@ export default function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/api" element={<API />} />
-                <Route path="/admin" element={<Admin />} />
+                
+                {/* Ruta protegida SOLO para admin */}
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <Admin />
+                    </ProtectedRoute>
+                  } 
+                />
               </Routes>
             </main>
           </div>

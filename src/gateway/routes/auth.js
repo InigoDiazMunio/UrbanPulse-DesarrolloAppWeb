@@ -52,21 +52,27 @@ router.post('/register', async (req, res) => {
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 🔥 DETERMINAR ROL SEGÚN EMAIL
+    const isUrbanPulseEmail = email.toLowerCase().endsWith('@urbanpulse.com');
+    const userRole = isUrbanPulseEmail ? 'admin' : 'user';
+
     // Crear usuario
     const newUser = new User({
       username,
       email,
       password: hashedPassword,
-      role: 'user'
+      role: userRole
     });
 
     await newUser.save();
 
-    console.log(`✅ Usuario registrado: ${username}`);
+    console.log(`✅ Usuario registrado: ${username} (email: ${email}, rol: ${userRole})`);
 
     res.status(201).json({ 
       success: true, 
-      message: 'Usuario registrado exitosamente',
+      message: isUrbanPulseEmail 
+        ? '🎉 Usuario registrado con privilegios de administrador' 
+        : 'Usuario registrado exitosamente',
       user: {
         username: newUser.username,
         email: newUser.email,
@@ -115,18 +121,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generar JWT
+    // Generar JWT con el rol
     const token = jwt.sign(
       { 
         userId: user._id, 
         username: user.username, 
-        role: user.role 
+        role: user.role
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    console.log(`✅ Login exitoso: ${username}`);
+    console.log(`✅ Login exitoso: ${username} (email: ${user.email}, rol: ${user.role})`);
 
     res.json({ 
       success: true,
@@ -162,7 +168,6 @@ router.get('/verify', async (req, res) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Buscar usuario actualizado
     const user = await User.findById(decoded.userId).select('-password');
 
     if (!user) {
@@ -189,7 +194,7 @@ router.get('/verify', async (req, res) => {
   }
 });
 
-// ✅ OBTENER PERFIL DE USUARIO
+// ✅ OBTENER PERFIL
 router.get('/profile', async (req, res) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -221,5 +226,177 @@ router.get('/profile', async (req, res) => {
     });
   }
 });
+
+// ✅ LISTAR TODOS LOS USUARIOS (solo admin)
+router.get('/users', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No autorizado' 
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Verificar que el usuario es admin
+    const requestingUser = await User.findById(decoded.userId);
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Acceso denegado. Solo administradores.' 
+      });
+    }
+
+    // Obtener todos los usuarios
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+
+    res.json({ 
+      success: true,
+      users
+    });
+
+  } catch (error) {
+    console.error('Error al listar usuarios:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error en el servidor' 
+    });
+  }
+});
+
+// ✅ CAMBIAR ROL DE USUARIO (solo admin)
+router.patch('/users/:userId/role', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No autorizado' 
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Verificar que el usuario es admin
+    const requestingUser = await User.findById(decoded.userId);
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Acceso denegado. Solo administradores.' 
+      });
+    }
+
+    // No permitir que el admin se quite sus propios privilegios
+    if (userId === decoded.userId.toString()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No puedes cambiar tu propio rol' 
+      });
+    }
+
+    // Validar rol
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Rol inválido' 
+      });
+    }
+
+    // Actualizar rol
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { role },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Usuario no encontrado' 
+      });
+    }
+
+    console.log(`✅ Rol actualizado: ${updatedUser.username} → ${role}`);
+
+    res.json({ 
+      success: true,
+      message: `Rol actualizado a ${role}`,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Error al cambiar rol:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error en el servidor' 
+    });
+  }
+});
+
+// ✅ ELIMINAR USUARIO (solo admin)
+router.delete('/users/:userId', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    const { userId } = req.params;
+
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No autorizado' 
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Verificar que el usuario es admin
+    const requestingUser = await User.findById(decoded.userId);
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Acceso denegado. Solo administradores.' 
+      });
+    }
+
+    // No permitir que el admin se elimine a sí mismo
+    if (userId === decoded.userId.toString()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No puedes eliminar tu propia cuenta' 
+      });
+    }
+
+    // Eliminar usuario
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Usuario no encontrado' 
+      });
+    }
+
+    console.log(`✅ Usuario eliminado: ${deletedUser.username}`);
+
+    res.json({ 
+      success: true,
+      message: 'Usuario eliminado correctamente'
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error en el servidor' 
+    });
+  }
+});
+
+module.exports = router;
 
 module.exports = router;

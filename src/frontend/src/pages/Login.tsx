@@ -15,52 +15,54 @@ export default function Login() {
   const apiBase = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:8080';
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setSuccess('');
+  setLoading(true);
 
-    try {
-      if (isLogin) {
-        // LOGIN
-        console.log('Intentando login con:', username);
-        const response = await axios.post(`${apiBase}/auth/login`, {
-          username,
-          password
-        });
+  try {
+    if (isLogin) {
+      // LOGIN
+      console.log('Intentando login con:', username);
+      const response = await axios.post(`${apiBase}/auth/login`, {
+        username,
+        password
+      });
 
-        console.log('Respuesta login:', response.data);
+      console.log('Respuesta login:', response.data);
 
-        if (response.data.success) {
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          navigate('/');
-        }
-      } else {
-        // REGISTRO
-        console.log('Intentando registro con:', username, email);
-        const response = await axios.post(`${apiBase}/auth/register`, {
-          username,
-          email,
-          password
-        });
-
-        console.log('Respuesta registro:', response.data);
-
-        if (response.data.success) {
-          setSuccess(' Usuario registrado! Ahora puedes iniciar sesión.');
-          setIsLogin(true);
-          setPassword('');
-        }
+      // IMPORTANTE: Guardar el rol
+      if (response.data.success) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('role', response.data.user.role || 'user'); // ← AÑADIR ESTO
+        window.location.href = '/'; // Recargar para actualizar navbar
       }
-    } catch (err: any) {
-      console.error('Error completo:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Error en el servidor';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+    } else {
+      // REGISTRO
+      console.log('Intentando registro con:', username, email);
+      const response = await axios.post(`${apiBase}/auth/register`, {
+        username,
+        email,
+        password
+      });
+
+      console.log('Respuesta registro:', response.data);
+
+      if (response.data.success) {
+        setSuccess('✅ Usuario registrado! Ahora puedes iniciar sesión.');
+        setIsLogin(true);
+        setPassword('');
+      }
     }
-  };
+  } catch (err: any) {
+    console.error('Error completo:', err);
+    const errorMessage = err.response?.data?.message || err.message || 'Error en el servidor';
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div style={{
