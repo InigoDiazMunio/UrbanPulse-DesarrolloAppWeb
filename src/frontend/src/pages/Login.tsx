@@ -15,54 +15,59 @@ export default function Login() {
   const apiBase = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:8080';
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setSuccess('');
-  setLoading(true);
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
 
-  try {
-    if (isLogin) {
-      // LOGIN
-      console.log('Intentando login con:', username);
-      const response = await axios.post(`${apiBase}/auth/login`, {
-        username,
-        password
-      });
+    try {
+      if (isLogin) {
+        // LOGIN
+        console.log('Intentando login con:', username);
+        const response = await axios.post(`${apiBase}/auth/login`, {
+          username,
+          password
+        });
 
-      console.log('Respuesta login:', response.data);
+        console.log('Respuesta login:', response.data);
 
-      // IMPORTANTE: Guardar el rol
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('role', response.data.user.role || 'user'); // ← AÑADIR ESTO
-        window.location.href = '/'; // Recargar para actualizar navbar
+        if (response.data.success) {
+          // Guardar datos en localStorage
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('role', response.data.user.role || 'user');
+          
+          // Usar navigate en lugar de window.location.href
+          navigate('/dashboard');
+          
+          // Forzar recarga para actualizar el estado de App.tsx
+          window.location.reload();
+        }
+      } else {
+        // REGISTRO
+        console.log('Intentando registro con:', username, email);
+        const response = await axios.post(`${apiBase}/auth/register`, {
+          username,
+          email,
+          password
+        });
+
+        console.log('Respuesta registro:', response.data);
+
+        if (response.data.success) {
+          setSuccess('✅ Usuario registrado! Ahora puedes iniciar sesión.');
+          setIsLogin(true);
+          setPassword('');
+        }
       }
-    } else {
-      // REGISTRO
-      console.log('Intentando registro con:', username, email);
-      const response = await axios.post(`${apiBase}/auth/register`, {
-        username,
-        email,
-        password
-      });
-
-      console.log('Respuesta registro:', response.data);
-
-      if (response.data.success) {
-        setSuccess('✅ Usuario registrado! Ahora puedes iniciar sesión.');
-        setIsLogin(true);
-        setPassword('');
-      }
+    } catch (err: any) {
+      console.error('Error completo:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Error en el servidor';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    console.error('Error completo:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Error en el servidor';
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div style={{
@@ -91,12 +96,11 @@ export default function Login() {
             margin: 0,
             textShadow: '0 0 20px rgba(0, 229, 204, 0.3)'
           }}>
-             UrbanPulse
-         
+            UrbanPulse
+          </h1>
           <p style={{ color: '#b2bac2', marginTop: '8px', fontSize: '14px' }}>
             Plataforma inteligente de movilidad urbana
           </p>
-           </h1>
         </div>
 
         {/* Tabs */}
@@ -279,7 +283,7 @@ export default function Login() {
               fontSize: '14px',
               border: '1px solid rgba(244, 67, 54, 0.3)'
             }}>
-               {error}
+              ❌ {error}
             </div>
           )}
 
@@ -293,7 +297,7 @@ export default function Login() {
               fontSize: '14px',
               border: '1px solid rgba(0, 229, 204, 0.3)'
             }}>
-              {success}
+              ✅ {success}
             </div>
           )}
 

@@ -14,9 +14,8 @@ function ProtectedRoute({ children, requireAdmin = false }: { children: React.Re
     return <Navigate to="/login" />;
   }
   
-  // Si requiere admin y el usuario no es admin, redirigir al dashboard
   if (requireAdmin && userRole !== 'admin') {
-    return <Navigate to="/" />;
+    return <Navigate to="/dashboard" />;
   }
   
   return <>{children}</>;
@@ -52,6 +51,11 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       
+      <Route 
+        path="/" 
+        element={<Navigate to="/login" replace />}
+      />
+      
       <Route path="/*" element={
         <ProtectedRoute>
           <div style={{ fontFamily: 'sans-serif', background: '#e8eaed', minHeight: '100vh' }}>
@@ -77,9 +81,9 @@ export default function App() {
                 </h1>
                 <nav style={{ display: 'flex', gap: '24px' }}>
                   <Link 
-                    to="/" 
+                    to="/dashboard" 
                     style={{ 
-                      color: location.pathname === '/' ? '#fff' : '#b0b8c1',
+                      color: location.pathname === '/dashboard' ? '#fff' : '#b0b8c1',
                       textDecoration: 'none', 
                       fontWeight: '500',
                       fontSize: '14px',
@@ -113,7 +117,6 @@ export default function App() {
                     API
                   </Link>
                   
-                  {/* Mostrar Admin SOLO si el rol es 'admin' */}
                   {role === 'admin' && (
                     <Link 
                       to="/admin" 
@@ -159,11 +162,9 @@ export default function App() {
             </header>
             <main>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/api" element={<API />} />
-                
-                {/* Ruta protegida SOLO para admin */}
                 <Route 
                   path="/admin" 
                   element={

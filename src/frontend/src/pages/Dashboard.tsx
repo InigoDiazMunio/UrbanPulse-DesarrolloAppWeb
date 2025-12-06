@@ -57,11 +57,13 @@ const MUNICIPALITY_TO_PROVINCE: { [key: string]: string } = {
   'Leioa': 'Bizkaia',
   'Sestao': 'Bizkaia',
   'Donostia-San Sebastián': 'Gipuzkoa',
+  'Donostia': 'Gipuzkoa',
   'Irun': 'Gipuzkoa',
   'Eibar': 'Gipuzkoa',
   'Errenteria': 'Gipuzkoa',
   'Zarautz': 'Gipuzkoa',
   'Vitoria-Gasteiz': 'Araba',
+  'Vitoria': 'Araba',
   'Llodio': 'Araba'
 };
 
@@ -77,7 +79,6 @@ export default function Dashboard() {
   const [traffic, setTraffic] = useState<Traffic[]>([]);
   const [air, setAir] = useState<Air[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProvince, setSelectedProvince] = useState('Todas');
   const [selectedPollutant, setSelectedPollutant] = useState('PM10');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   
@@ -94,8 +95,8 @@ export default function Dashboard() {
           axios.get(`${apiBase}/meteorologia/realtime`, { headers })
         ]);
         
-        console.log('📊 Traffic:', trafficRes.data.length, 'zones');
-        console.log('🌫️ Air:', airRes.data.length, 'measurements');
+        console.log(' Traffic:', trafficRes.data.length, 'zones');
+        console.log(' Air:', airRes.data.length, 'measurements');
         
         setTraffic(trafficRes.data);
         setAir(airRes.data);
@@ -124,59 +125,49 @@ export default function Dashboard() {
     return 'Otras';
   };
 
-  const filteredTraffic = selectedProvince === 'Todas' 
-    ? traffic 
-    : traffic.filter(t => getProvince(t.zone) === selectedProvince);
-
-  const filteredAir = selectedProvince === 'Todas'
-    ? air
-    : air.filter(a => {
-        const cityProvince = getProvince(a.city || '');
-        const zoneProvince = getProvince(a.zone || '');
-        return cityProvince === selectedProvince || zoneProvince === selectedProvince;
-      });
-
-  const totalVehicles = filteredTraffic.reduce((sum, t) => sum + t.vehicle_count, 0);
-  const totalIncidents = filteredTraffic.reduce((sum, t) => sum + t.incident_count, 0);
+  // Sin filtros - todos los datos
+  const totalVehicles = traffic.reduce((sum, t) => sum + t.vehicle_count, 0);
+  const totalIncidents = traffic.reduce((sum, t) => sum + t.incident_count, 0);
   
-  const pollutantData = filteredAir.filter(a => a.pollutant === selectedPollutant);
+  const pollutantData = air.filter(a => a.pollutant === selectedPollutant);
   const avgPollutant = pollutantData.length > 0
     ? pollutantData.reduce((sum, a) => sum + a.value, 0) / pollutantData.length
     : 0;
 
-  const provinceStats: { [key: string]: { vehicles: number; pm10Values: number[]; incidents: number } } = {
-    'Bizkaia': { vehicles: 0, pm10Values: [], incidents: 0 },
-    'Gipuzkoa': { vehicles: 0, pm10Values: [], incidents: 0 },
-    'Araba': { vehicles: 0, pm10Values: [], incidents: 0 }
+  // Estadísticas por provincia para el gráfico - CAMBIO AQUÍ
+  const provinceStats: { [key: string]: { vehicles: number; pollutantValues: number[] } } = {
+    'Bizkaia': { vehicles: 0, pollutantValues: [] },
+    'Gipuzkoa': { vehicles: 0, pollutantValues: [] },
+    'Araba': { vehicles: 0, pollutantValues: [] }
   };
   
-  filteredTraffic.forEach(t => {
+  traffic.forEach(t => {
     const province = getProvince(t.zone);
     if (provinceStats[province]) {
       provinceStats[province].vehicles += t.vehicle_count;
-      provinceStats[province].incidents += t.incident_count;
     }
   });
   
-  filteredAir.filter(a => a.pollutant === 'PM10').forEach(a => {
+  // USAR selectedPollutant en lugar de 'PM10' fijo
+  air.filter(a => a.pollutant === selectedPollutant).forEach(a => {
     const province = getProvince(a.city || a.zone);
     if (provinceStats[province]) {
-      provinceStats[province].pm10Values.push(a.value);
+      provinceStats[province].pollutantValues.push(a.value);
     }
   });
 
   const chartData = Object.keys(provinceStats)
-    .map(province => ({
-      province: province,
-      Vehículos: Math.round(provinceStats[province].vehicles / 100),
-      'PM10': provinceStats[province].pm10Values.length > 0
-        ? Math.round(provinceStats[province].pm10Values.reduce((a, b) => a + b, 0) / provinceStats[province].pm10Values.length)
-        : 0,
-      // Seguimos calculando incidencias por si acaso, pero no las usaremos en el gráfico
-      Incidencias: Math.max(provinceStats[province].incidents, 0.1)
-    }))
-    .filter(d => d.Vehículos > 0 || d.PM10 > 0);
-
+  .map(province => ({
+    province: province,
+    Vehículos: Math.round(provinceStats[province].vehicles / 100),
+    [selectedPollutant]: provinceStats[province].pollutantValues.length > 0
+      ? Math.round(provinceStats[province].pollutantValues.reduce((a, b) => a + b, 0) / provinceStats[province].pollutantValues.length)
+      : 0
+  }))
+  .filter(d => {
+    const pollutantValue = d[selectedPollutant as keyof typeof d] as number;
+    return d.Vehículos > 0 || pollutantValue > 0;
+  });
   const getColorByPM10 = (pm10Value: number): string => {
     if (pm10Value > 50) return '#e53935';
     if (pm10Value > 30) return '#fb8c00';
@@ -228,7 +219,7 @@ export default function Dashboard() {
              Tráfico: Open Data Euskadi •  Calidad del Aire: Gobierno Vasco
           </span>
           <span style={{ fontSize: '12px', color: '#5f6368' }}>
-            Actualiza cada 5 minutos• Última: {lastUpdate.toLocaleTimeString('es-ES')}
+            Actualiza cada 5 minutos • Última: {lastUpdate.toLocaleTimeString('es-ES')}
           </span>
         </div>
 
@@ -242,9 +233,6 @@ export default function Dashboard() {
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             position: 'relative'
           }}>
-            {/* CAMBIO 2: Eliminada la cajetilla pequeña del contador de estaciones que estaba aquí */}
-
-            {/* LEYENDA MÁS VISIBLE */}
             <div style={{
               position: 'absolute',
               bottom: '40px',
@@ -260,7 +248,6 @@ export default function Dashboard() {
               <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '13px', color: '#202124' }}>
                 {selectedPollutant} (µg/m³)
               </div>
-              {/* CAMBIO 1: Añadido color: '#202124' a los textos para que se vean bien */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#43a047', border: '2px solid white', boxShadow: '0 0 0 1px #333' }} />
                 <span style={{ fontWeight: '500', color: '#202124' }}>0-15: Bueno</span>
@@ -328,7 +315,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
             <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-              <div style={{ fontSize: '14px', color: '#5f6368', marginBottom: '8px' }}>Vehicle Count</div>
+              <div style={{ fontSize: '14px', color: '#5f6368', marginBottom: '8px' }}>Numero de Vehiculos</div>
               <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#202124' }}>{totalVehicles.toLocaleString()}</div>
               <div style={{ fontSize: '11px', color: '#5f6368', marginTop: '4px' }}>
                  vehículos/hora • Open Data Euskadi
@@ -353,33 +340,28 @@ export default function Dashboard() {
             </div>
 
             <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '16px' }}>Filters</div>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '16px', color: '#000' }}>Filtro</div>
               
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '12px', color: '#5f6368', marginBottom: '8px' }}>Provincia</label>
-                <select 
-                  value={selectedProvince}
-                  onChange={(e) => setSelectedProvince(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #dadce0', fontSize: '14px', cursor: 'pointer' }}
-                >
-                  <option value="Todas">Todas las provincias</option>
-                  <option value="Bizkaia"> Bizkaia</option>
-                  <option value="Gipuzkoa"> Gipuzkoa</option>
-                  <option value="Araba"> Araba</option>
-                </select>
-              </div>
-
               <div>
                 <label style={{ display: 'block', fontSize: '12px', color: '#5f6368', marginBottom: '8px' }}>Contaminante</label>
                 <select 
                   value={selectedPollutant}
                   onChange={(e) => setSelectedPollutant(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #dadce0', fontSize: '14px', cursor: 'pointer' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    borderRadius: '8px', 
+                    border: '1px solid #dadce0', 
+                    fontSize: '14px', 
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#000'
+                  }}
                 >
-                  <option value="PM10">PM10</option>
-                  <option value="PM25">PM2.5</option>
-                  <option value="NO2">NO2</option>
-                  <option value="O3">O3</option>
+                  <option value="PM10"> PM10 (Partículas 10µm)</option>
+                  <option value="PM25"> PM2.5 (Partículas 2.5µm)</option>
+                  <option value="NO2"> NO2 (Dióxido de Nitrógeno)</option>
+                  <option value="O3"> O3 (Ozono)</option>
                 </select>
               </div>
             </div>
@@ -387,9 +369,12 @@ export default function Dashboard() {
         </div>
 
         <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '500', margin: '0 0 4px 0' }}>Traffic vs Pollution - Por Provincias</h3>
-          {/* CAMBIO 3: Actualizado el subtítulo y eliminada la barra de Incidencias */}
-          <p style={{ fontSize: '12px', color: '#5f6368', margin: '0 0 20px 0' }}>Vehículos (÷100) y PM10</p>
+          <h3 style={{ fontSize: '18px', fontWeight: '500', margin: '0 0 4px 0', color: '#202124' }}>
+            Comparativa por Provincias
+          </h3>
+          <p style={{ fontSize: '12px', color: '#5f6368', margin: '0 0 20px 0' }}>
+            Vehículos (÷100) y {selectedPollutant} (µg/m³)
+          </p>
           
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -400,8 +385,7 @@ export default function Dashboard() {
                 <Tooltip contentStyle={{ background: 'white', border: '1px solid #dadce0', borderRadius: '8px', fontSize: '12px' }} />
                 <Legend />
                 <Bar dataKey="Vehículos" fill="#4285f4" name="Vehículos (÷100)" />
-                <Bar dataKey="PM10" fill="#34a853" name="PM10 µg/m³" />
-                {/* La barra de incidencias ha sido eliminada aquí */}
+                <Bar dataKey={selectedPollutant} fill="#34a853" name={`${selectedPollutant} µg/m³`} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
