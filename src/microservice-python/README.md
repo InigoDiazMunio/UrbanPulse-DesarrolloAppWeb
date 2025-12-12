@@ -5,7 +5,7 @@
 - **pip** (gestor de paquetes de Python)
 - **Docker** 
 ---
-## 1) Servicios que hay que arrancar
+## 1 Servicios que hay que arrancar
 Este microservicio gestiona los datos de **contaminación y meteorología** en tiempo real, consumiendo datos de APIs como **AEMET** y **OpenAQ**.  
 Proporciona un API RESTful documentado con **OpenAPI 3.0** y corre por defecto en el puerto **8001**.
 
