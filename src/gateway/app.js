@@ -20,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 //  RUTAS DE AUTENTICACIÓN
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
