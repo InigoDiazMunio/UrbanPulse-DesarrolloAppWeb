@@ -9,7 +9,6 @@ if (!db.getCollectionNames().includes('traffic')) {
   print('ℹ️  Collection "traffic" already exists');
 }
 
-// Insertar datos de ejemplo solo si la colección está vacía
 if (db.traffic.countDocuments() === 0) {
   db.traffic.insertMany([
     {
